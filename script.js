@@ -1,3 +1,30 @@
+// Preload game resources as early as possible
+const preloadGame = () => {
+    const gameUrl = 'https://games.crazygames.com/en_US/the-visitor/index.html';
+    
+    // Create invisible iframe for preloading
+    const preloadFrame = document.createElement('iframe');
+    preloadFrame.src = gameUrl;
+    preloadFrame.style.display = 'none';
+    preloadFrame.style.position = 'absolute';
+    preloadFrame.style.left = '-9999px';
+    document.body.appendChild(preloadFrame);
+    
+    // Remove preload frame after 5 seconds
+    setTimeout(() => {
+        if (preloadFrame.parentNode) {
+            preloadFrame.parentNode.removeChild(preloadFrame);
+        }
+    }, 5000);
+};
+
+// Start preloading immediately
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', preloadGame);
+} else {
+    preloadGame();
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Mobile menu toggle
     const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
@@ -36,45 +63,87 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // FAQ items are now always expanded - no accordion functionality needed
     
-    // Game iframe loading with error handling
+    // Game iframe loading with optimized performance
     const gameIframe = document.getElementById('game-iframe');
     if (gameIframe) {
-        // Set the actual game URL here - using Cloudflare Worker to avoid CORS issues
         const gameUrl = 'https://games.crazygames.com/en_US/the-visitor/index.html';
         
-        // Loading message
+        // Optimized loading message with progress indication
         const gameContainer = document.querySelector('.game-container');
         const loadingMessage = document.createElement('div');
         loadingMessage.className = 'loading-message';
-        loadingMessage.innerHTML = '<p>Loading game...</p><div class="spinner"></div>';
+        loadingMessage.innerHTML = `
+            <div class="loading-content">
+                <p>🎮 Loading The Visitor...</p>
+                <div class="progress-bar">
+                    <div class="progress-fill"></div>
+                </div>
+                <p class="loading-tip">💡 Tip: Use headphones for the best horror experience!</p>
+            </div>
+        `;
         gameContainer.appendChild(loadingMessage);
+        
+        // Simulate progress for better UX
+        const progressFill = loadingMessage.querySelector('.progress-fill');
+        let progress = 0;
+        const progressInterval = setInterval(() => {
+            progress += Math.random() * 15;
+            if (progress > 90) progress = 90;
+            progressFill.style.width = progress + '%';
+        }, 200);
         
         // Error handling
         const showError = () => {
-            loadingMessage.innerHTML = '<p>⚠️ Game failed to load. Please refresh the page or try again later.</p>';
-            loadingMessage.style.color = 'var(--accent-color)';
+            clearInterval(progressInterval);
+            loadingMessage.innerHTML = `
+                <div class="error-content">
+                    <p>⚠️ Game failed to load</p>
+                    <button onclick="location.reload()" class="btn btn-primary">🔄 Retry</button>
+                    <p class="error-tip">Try refreshing the page or check your internet connection</p>
+                </div>
+            `;
         };
         
-        // Set iframe source
-        console.log('Setting game URL to:', gameUrl);
+        // Preload game resources
+        console.log('🚀 Preloading game resources...');
+        const preloadLink = document.createElement('link');
+        preloadLink.rel = 'prefetch';
+        preloadLink.href = gameUrl;
+        document.head.appendChild(preloadLink);
+        
+        // Set iframe source with optimizations
         gameIframe.src = gameUrl;
         
-        // Success handler
+        // Enhanced success handler
         gameIframe.addEventListener('load', () => {
+            clearInterval(progressInterval);
+            progressFill.style.width = '100%';
+            
+            // Google Analytics event
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'game_loaded', {
+                    'event_category': 'game_performance',
+                    'event_label': 'the_visitor_loaded'
+                });
+            }
+            
             setTimeout(() => {
-                loadingMessage.style.display = 'none';
-            }, 1000);
+                loadingMessage.style.opacity = '0';
+                setTimeout(() => {
+                    loadingMessage.style.display = 'none';
+                }, 300);
+            }, 500);
         });
         
         // Error handler
         gameIframe.addEventListener('error', showError);
         
-        // Timeout handler (if game doesn't load within 30 seconds)
+        // Reduced timeout for faster error detection
         setTimeout(() => {
             if (loadingMessage.style.display !== 'none') {
                 showError();
             }
-        }, 30000);
+        }, 20000);
     }
     
     // Fullscreen button
@@ -191,20 +260,44 @@ document.addEventListener('DOMContentLoaded', function() {
             transform: translate(-50%, -50%);
             text-align: center;
             color: white;
+            transition: opacity 0.3s ease;
+            z-index: 10;
         }
         
-        .spinner {
-            margin: 20px auto;
-            width: 40px;
-            height: 40px;
-            border: 4px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: var(--accent-color);
-            animation: spin 1s ease-in-out infinite;
+        .loading-content, .error-content {
+            background: rgba(0, 0, 0, 0.8);
+            padding: 2rem;
+            border-radius: var(--border-radius);
+            border: 1px solid var(--accent-color);
+            backdrop-filter: blur(10px);
         }
         
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .progress-bar {
+            width: 200px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            margin: 1rem auto;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 3px;
+        }
+        
+        .loading-tip, .error-tip {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-top: 1rem;
+        }
+        
+        .error-content .btn {
+            margin: 1rem 0;
+            padding: 0.8rem 1.5rem;
         }
         
         .header {

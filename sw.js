@@ -1,32 +1,69 @@
 // Service Worker for caching and offline support
-const CACHE_NAME = 'the-visitor-v2';
+const CACHE_NAME = 'the-visitor-v3';
+const GAME_CACHE = 'the-visitor-game-v1';
+
 const urlsToCache = [
     '/',
     '/index.html',
-    '/styles.css',
-    '/script.js',
-    '/images/visitor-hero.jpg',
-    '/images/visitor-screenshot.jpg',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
+    '/styles.css?v=2',
+    '/script.js?v=2',
+    '/manifest.json',
+    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css',
+    'https://imgs.crazygames.com/thevisitor.png?metadata=none&quality=100&width=800&height=600&fit=crop'
+];
+
+const gameUrlsToCache = [
+    'https://games.crazygames.com/en_US/the-visitor/index.html'
 ];
 
 // Install event - cache resources
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
+        Promise.all([
+            caches.open(CACHE_NAME).then(cache => {
+                console.log('Caching app resources');
                 return cache.addAll(urlsToCache);
+            }),
+            caches.open(GAME_CACHE).then(cache => {
+                console.log('Preloading game resources');
+                return cache.addAll(gameUrlsToCache).catch(err => {
+                    console.log('Game preload failed, will load on demand');
+                });
             })
+        ])
     );
+    self.skipWaiting();
 });
 
-// Fetch event - serve from cache when offline
+// Fetch event - optimized caching strategy
 self.addEventListener('fetch', event => {
+    const url = new URL(event.request.url);
+    
+    // Game resources - cache first, then network
+    if (url.hostname === 'games.crazygames.com') {
+        event.respondWith(
+            caches.match(event.request)
+                .then(response => {
+                    if (response) {
+                        console.log('Serving game from cache');
+                        return response;
+                    }
+                    return fetch(event.request).then(response => {
+                        const responseClone = response.clone();
+                        caches.open(GAME_CACHE).then(cache => {
+                            cache.put(event.request, responseClone);
+                        });
+                        return response;
+                    });
+                })
+        );
+        return;
+    }
+    
+    // App resources - cache first
     event.respondWith(
         caches.match(event.request)
             .then(response => {
-                // Return cached version or fetch from network
                 return response || fetch(event.request);
             })
     );
@@ -38,7 +75,7 @@ self.addEventListener('activate', event => {
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
+                    if (cacheName !== CACHE_NAME && cacheName !== GAME_CACHE) {
                         console.log('Deleting old cache:', cacheName);
                         return caches.delete(cacheName);
                     }
@@ -46,4 +83,5 @@ self.addEventListener('activate', event => {
             );
         })
     );
+    self.clients.claim();
 });
