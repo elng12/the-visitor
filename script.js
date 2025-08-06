@@ -1,29 +1,5 @@
-// Preload game resources as early as possible
-const preloadGame = () => {
-    const gameUrl = 'https://games.crazygames.com/en_US/the-visitor/index.html';
-    
-    // Create invisible iframe for preloading
-    const preloadFrame = document.createElement('iframe');
-    preloadFrame.src = gameUrl;
-    preloadFrame.style.display = 'none';
-    preloadFrame.style.position = 'absolute';
-    preloadFrame.style.left = '-9999px';
-    document.body.appendChild(preloadFrame);
-    
-    // Remove preload frame after 5 seconds
-    setTimeout(() => {
-        if (preloadFrame.parentNode) {
-            preloadFrame.parentNode.removeChild(preloadFrame);
-        }
-    }, 5000);
-};
-
-// Start preloading immediately
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', preloadGame);
-} else {
-    preloadGame();
-}
+// Game preloading disabled to prevent conflicts
+// Will be re-enabled once proxy is properly configured
 
 document.addEventListener('DOMContentLoaded', function() {
     // Mobile menu toggle
@@ -66,9 +42,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Game iframe loading with optimized performance
     const gameIframe = document.getElementById('game-iframe');
     if (gameIframe) {
-        // Use proxy for better performance (update with your actual proxy URL)
-        const useProxy = true; // Set to false to use direct loading
-        const proxyUrl = 'https://your-proxy-domain.vercel.app/game'; // Update this
+        // Use direct loading for now (proxy can be enabled later)
+        const useProxy = false; // Set to true when proxy is deployed
+        const proxyUrl = 'https://your-proxy-domain.vercel.app/game'; // Update this when ready
         const directUrl = 'https://games.crazygames.com/en_US/the-visitor/index.html';
         const gameUrl = useProxy ? `${proxyUrl}/en_US/the-visitor/index.html` : directUrl;
         
@@ -108,14 +84,11 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         };
         
-        // Preload game resources
-        console.log('🚀 Preloading game resources...');
-        const preloadLink = document.createElement('link');
-        preloadLink.rel = 'prefetch';
-        preloadLink.href = gameUrl;
-        document.head.appendChild(preloadLink);
+        // Skip preloading for now to avoid conflicts
+        console.log('🚀 Loading game directly...');
         
         // Set iframe source with optimizations
+        console.log('🎮 Loading game from:', gameUrl);
         gameIframe.src = gameUrl;
         
         // Enhanced success handler
