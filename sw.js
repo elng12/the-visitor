@@ -13,7 +13,7 @@ const urlsToCache = [
 ];
 
 const gameUrlsToCache = [
-    'https://games.crazygames.com/en_US/the-visitor/index.html'
+    'https://the-visitor.game-files.crazygames.com/ruffle/thevisitor.html?ssrDevice=desktop&isNewUser=false&v=1.337'
 ];
 
 // Install event - cache resources
@@ -40,7 +40,7 @@ self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
 
     // Game resources - cache first, then network
-    if (url.hostname === 'games.crazygames.com') {
+    if (url.hostname === 'the-visitor.game-files.crazygames.com' || url.hostname === 'games.crazygames.com') {
         event.respondWith(
             caches.match(event.request)
                 .then(response => {

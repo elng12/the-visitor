@@ -42,10 +42,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Game iframe loading with optimized performance
     const gameIframe = document.getElementById('game-iframe');
     if (gameIframe) {
-        // Use direct loading for now (proxy can be enabled later)
+        // Use optimized direct game file URL
         const useProxy = false; // Set to true when proxy is deployed
         const proxyUrl = 'https://your-proxy-domain.vercel.app/game'; // Update this when ready
-        const directUrl = 'https://games.crazygames.com/en_US/the-visitor/index.html';
+        const directUrl = 'https://the-visitor.game-files.crazygames.com/ruffle/thevisitor.html?ssrDevice=desktop&isNewUser=false&v=1.337';
         const gameUrl = useProxy ? `${proxyUrl}/en_US/the-visitor/index.html` : directUrl;
         
         // Optimized loading message with progress indication
