@@ -1,5 +1,5 @@
 // Service Worker for caching and offline support
-const CACHE_NAME = 'the-visitor-v1';
+const CACHE_NAME = 'the-visitor-v2';
 const urlsToCache = [
     '/',
     '/index.html',

@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         
         // Set iframe source
+        console.log('Setting game URL to:', gameUrl);
         gameIframe.src = gameUrl;
         
         // Success handler
