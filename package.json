@@ -1,0 +1,22 @@
+{
+  "name": "the-visitor-proxy",
+  "version": "1.0.0",
+  "description": "High-performance proxy server for The Visitor game",
+  "main": "game-proxy.js",
+  "scripts": {
+    "start": "node game-proxy.js",
+    "dev": "nodemon game-proxy.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "http-proxy-middleware": "^2.0.6",
+    "cors": "^2.8.5",
+    "compression": "^1.7.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

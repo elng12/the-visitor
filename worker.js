@@ -1,32 +1,43 @@
 /**
- * CORSflare - 一个轻量级的CORS代理，用于解决iframe跨域问题
- * 设计用于在Cloudflare Workers上运行
+ * High-Performance Game Proxy Worker
+ * Optimized for The Visitor game with caching and performance enhancements
  */
 
-// 配置项
+// Enhanced configuration
 const config = {
-  // 上游网站的主机名
   upstream: 'games.crazygames.com',
-  
-  // 是否使用HTTPS连接上游网站
   https: true,
   
-  // 需要添加或修改的HTTP响应头
+  // Cache settings
+  cache: {
+    // Cache static assets for 1 day
+    staticAssets: 86400,
+    // Cache HTML for 1 hour
+    html: 3600,
+    // Cache API responses for 5 minutes
+    api: 300
+  },
+  
+  // Response headers for CORS and performance
   http_response_headers_set: {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, HEAD, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Requested-With',
     'Access-Control-Allow-Credentials': 'true',
     'Access-Control-Max-Age': '86400',
     'X-Frame-Options': 'ALLOWALL',
-    'X-Content-Type-Options': 'nosniff'
+    'X-Content-Type-Options': 'nosniff',
+    // Performance headers
+    'X-Proxy-Cache': 'HIT',
+    'X-Powered-By': 'Cloudflare-Worker'
   },
   
-  // 需要删除的HTTP响应头
+  // Headers to remove
   http_response_headers_delete: [
     'Content-Security-Policy',
     'X-Frame-Options',
-    'Frame-Options'
+    'Frame-Options',
+    'Strict-Transport-Security'
   ]
 };
 
@@ -36,45 +47,72 @@ addEventListener('fetch', event => {
 });
 
 /**
- * 处理请求
- * @param {Request} request - 原始请求
- * @returns {Response} - 返回响应
+ * Enhanced request handler with caching
+ * @param {Request} request - Original request
+ * @returns {Response} - Modified response
  */
 async function handleRequest(request) {
-  // 处理OPTIONS预检请求
+  // Handle OPTIONS preflight
   if (request.method === 'OPTIONS') {
     return handleOptions(request);
   }
   
   try {
-    // 获取请求URL
     const url = new URL(request.url);
     let targetUrl;
     
-    // 检查是否有指定的上游URL参数
+    // Build target URL
     if (url.searchParams.has('url')) {
       targetUrl = url.searchParams.get('url');
     } else {
-      // 构建上游URL
       const path = url.pathname + url.search;
       targetUrl = `${config.https ? 'https' : 'http'}://${config.upstream}${path}`;
     }
     
-    // 创建新的请求
+    // Check cache first
+    const cacheKey = new Request(targetUrl, request);
+    const cache = caches.default;
+    let response = await cache.match(cacheKey);
+    
+    if (response) {
+      // Return cached response with cache headers
+      const newHeaders = new Headers(response.headers);
+      newHeaders.set('X-Proxy-Cache', 'HIT');
+      newHeaders.set('X-Cache-Date', new Date().toISOString());
+      
+      return new Response(response.body, {
+        status: response.status,
+        statusText: response.statusText,
+        headers: newHeaders
+      });
+    }
+    
+    // Create optimized request
     const modifiedRequest = new Request(targetUrl, {
       method: request.method,
-      headers: request.headers,
+      headers: enhanceRequestHeaders(request.headers),
       body: request.body,
       redirect: 'follow'
     });
     
-    // 发送请求到上游服务器
-    const response = await fetch(modifiedRequest);
+    // Fetch from upstream
+    response = await fetch(modifiedRequest);
     
-    // 修改响应
-    return modifyResponse(response);
+    // Modify and cache response
+    const modifiedResponse = await modifyResponse(response, targetUrl);
+    
+    // Cache based on content type
+    if (shouldCache(targetUrl, modifiedResponse)) {
+      const cacheResponse = modifiedResponse.clone();
+      await cache.put(cacheKey, cacheResponse);
+    }
+    
+    return modifiedResponse;
   } catch (err) {
-    return new Response(`代理错误: ${err.message}`, { status: 500 });
+    return new Response(`Proxy Error: ${err.message}`, { 
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' }
+    });
   }
 }
 
@@ -98,28 +136,92 @@ function handleOptions(request) {
 }
 
 /**
- * 修改响应
- * @param {Response} response - 原始响应
- * @returns {Response} - 修改后的响应
+ * Enhance request headers for better upstream compatibility
  */
-async function modifyResponse(response) {
-  // 创建新的响应头
+function enhanceRequestHeaders(headers) {
+  const newHeaders = new Headers(headers);
+  
+  // Add realistic browser headers
+  newHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+  newHeaders.set('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8');
+  newHeaders.set('Accept-Language', 'en-US,en;q=0.9');
+  newHeaders.set('Accept-Encoding', 'gzip, deflate, br');
+  newHeaders.set('Referer', 'https://www.crazygames.com/');
+  newHeaders.set('Sec-Fetch-Dest', 'iframe');
+  newHeaders.set('Sec-Fetch-Mode', 'navigate');
+  
+  return newHeaders;
+}
+
+/**
+ * Determine if response should be cached
+ */
+function shouldCache(url, response) {
+  // Don't cache errors
+  if (!response.ok) return false;
+  
+  const urlObj = new URL(url);
+  const pathname = urlObj.pathname.toLowerCase();
+  
+  // Cache static assets
+  if (pathname.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot|mp3|mp4|webm)$/)) {
+    return true;
+  }
+  
+  // Cache HTML files
+  if (pathname.match(/\.(html|htm)$/) || pathname.endsWith('/')) {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Get cache TTL based on content type
+ */
+function getCacheTTL(url) {
+  const urlObj = new URL(url);
+  const pathname = urlObj.pathname.toLowerCase();
+  
+  // Static assets - 1 day
+  if (pathname.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return config.cache.staticAssets;
+  }
+  
+  // HTML files - 1 hour
+  if (pathname.match(/\.(html|htm)$/) || pathname.endsWith('/')) {
+    return config.cache.html;
+  }
+  
+  // Default - 5 minutes
+  return config.cache.api;
+}
+
+/**
+ * Enhanced response modifier with caching headers
+ */
+async function modifyResponse(response, url) {
   const newHeaders = new Headers(response.headers);
   
-  // 删除指定的响应头
+  // Remove restrictive headers
   for (const header of config.http_response_headers_delete) {
     newHeaders.delete(header);
   }
   
-  // 添加或修改响应头
+  // Add CORS and performance headers
   for (const [key, value] of Object.entries(config.http_response_headers_set)) {
     newHeaders.set(key, value);
   }
   
-  // 获取响应体
+  // Add cache headers
+  const ttl = getCacheTTL(url);
+  newHeaders.set('Cache-Control', `public, max-age=${ttl}`);
+  newHeaders.set('X-Cache-TTL', ttl.toString());
+  newHeaders.set('X-Proxy-Cache', 'MISS');
+  
+  // Get response body
   const body = await response.arrayBuffer();
   
-  // 创建新的响应
   return new Response(body, {
     status: response.status,
     statusText: response.statusText,

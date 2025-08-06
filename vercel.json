@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "name": "the-visitor-proxy",
+  "functions": {
+    "game-proxy.js": {
+      "maxDuration": 30,
+      "memory": 1024
+    }
+  },
+  "routes": [
+    {
+      "src": "/game/(.*)",
+      "dest": "/game-proxy.js"
+    },
+    {
+      "src": "/health",
+      "dest": "/game-proxy.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/game/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=3600"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        }
+      ]
+    }
+  ]
+}

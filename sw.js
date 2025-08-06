@@ -38,7 +38,7 @@ self.addEventListener('install', event => {
 // Fetch event - optimized caching strategy
 self.addEventListener('fetch', event => {
     const url = new URL(event.request.url);
-    
+
     // Game resources - cache first, then network
     if (url.hostname === 'games.crazygames.com') {
         event.respondWith(
@@ -59,7 +59,7 @@ self.addEventListener('fetch', event => {
         );
         return;
     }
-    
+
     // App resources - cache first
     event.respondWith(
         caches.match(event.request)
