@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const gameIframe = document.getElementById('game-iframe');
     if (gameIframe) {
         // Set the actual game URL here - using Cloudflare Worker to avoid CORS issues
-        const gameUrl = 'https://your-worker-subdomain.workers.dev/?url=https://games.crazygames.com/en_US/the-visitor/index.html';
+        const gameUrl = 'https://games.crazygames.com/en_US/the-visitor/index.html';
         
         // Loading message
         const gameContainer = document.querySelector('.game-container');
@@ -80,6 +80,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const fullscreenBtn = document.getElementById('fullscreen-btn');
     if (fullscreenBtn && gameIframe) {
         fullscreenBtn.addEventListener('click', () => {
+            // Google Analytics event tracking
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'fullscreen_click', {
+                    'event_category': 'game_interaction',
+                    'event_label': 'the_visitor_game'
+                });
+            }
+            
             if (gameIframe.requestFullscreen) {
                 gameIframe.requestFullscreen();
             } else if (gameIframe.mozRequestFullScreen) { // Firefox
@@ -100,6 +108,14 @@ document.addEventListener('DOMContentLoaded', function() {
         soundBtn.addEventListener('click', () => {
             soundOn = !soundOn;
             const icon = soundBtn.querySelector('i');
+            
+            // Google Analytics event tracking
+            if (typeof gtag !== 'undefined') {
+                gtag('event', 'sound_toggle', {
+                    'event_category': 'game_interaction',
+                    'event_label': soundOn ? 'sound_on' : 'sound_off'
+                });
+            }
             
             if (soundOn) {
                 icon.className = 'fas fa-volume-up';
