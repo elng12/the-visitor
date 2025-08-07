@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://thevisitor.games/sitemap.xml
+
+# Block unnecessary files
+Disallow: /sw.js
+Disallow: /worker.js
+Disallow: /game-proxy.js
+Disallow: /package.json
+Disallow: /vercel.json
+Disallow: /*.md$
